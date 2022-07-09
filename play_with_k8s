@@ -1,0 +1,203 @@
+ Get all nodes
+kubectl get nodes -o wide
+
+
+# Get pods in all namespaces
+kubectl get pods --all-namespaces -o wide
+
+
+vi nginx-pod.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    apps: nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    imagePullPolicy: IfNotPresent
+    ports:
+    - containerPort: 80
+
+
+
+kubectl create -f nginx-pod.yml
+
+kubectl get pods
+
+kubectl get pods -o wide
+
+kubectl describe pods nginx
+
+curl <POD_IP>
+
+kubectl expose pod nginx --port=80 --name=nginx-http
+
+kubectl expose pod nginx --type=NodePort
+
+kubectl get svc
+
+curl <SVC_IP>
+
+kubectl delete svc nginx-http
+
+kubectl delete -f nginx-pod.yml
+
+kubectl get svc
+kubectl get pod
+
+vi nginx-rs.yml
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: nginx
+spec:
+  replicas: 3
+  selector:
+    apps: nginx
+  template:
+    metadata:
+      name: nginx
+      labels:
+        apps: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+
+kubectl create -f nginx-rs.yml
+
+kubectl get rc -o wide
+
+kubectl describe rc nginx
+
+kubectl get pods
+
+kubectl get pods -o wide
+
+vi nginx-svc.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  labels:
+    apps: nginx
+spec:
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  selector:
+    apps: nginx
+  type: LoadBalancer
+
+
+kubectl create -f nginx-svc.yml
+
+kubectl get svc
+
+kubectl create deployment nginx --image=nginx
+
+vi deploymnet.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+
+
+https://github.com/kubernetes/examples/blob/master/guestbook/frontend-deployment.yaml
+
+
+
+apiVersion: apps/v1 
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx 
+        image: nginx:latest
+		ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+
+
+ kubectl create -f  deploymnet.yaml
+
+
+kubectl scale deploy --replicas=3 nginx
+
+# Now, in order to create an Ingress, we need to create a Service first. Our   svc.yml looks as follows:
+
+vi svc.yml 
+
+apiVersion: v1
+kind: Service
+metadata:
+    labels:
+        app: nginx
+    name: nginx-svc
+spec:
+    ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 80
+    selector:
+        app: nginx
+    type: ClusterIP
+	
+	
+k apply -f svc.yaml
+
+
+Ingress Controllers
+
+
+
+
+# Extra
+
+
+# Remove the taint from master node (i.e. Allow pods to be scheduled on the master)
+kubectl taint nodes $(hostname) node-role.kubernetes.io/master-
+
+# Add the taint back again
+kubectl taint nodes $(hostname) $(hostname)=DoNotSchedulePods:NoSchedule
+
+# To reset "kubeadm init"
+kubectl drain $(hostname) --delete-local-data --force --ignore-daemonsets
+kubectl delete node $(hostname)
+sudo kubeadm reset
+
+cat /run/flannel/subnet.env
+
