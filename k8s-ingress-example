@@ -1,1 +1,124 @@
 
+How to Use Nginx Ingress Controller 
+
+Creating a Kubernetes Ingress
+First, let’s create two services to demonstrate how the Ingress routes our request. We’ll run two web applications that output a slightly different response.
+
+vi apple.yaml
+
+kind: Pod
+apiVersion: v1
+metadata:
+  name: apple-app
+  labels:
+    app: apple
+spec:
+  containers:
+    - name: apple-app
+      image: hashicorp/http-echo
+      args:
+        - "-text=apple"
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: apple-service
+spec:
+  selector:
+    app: apple
+  ports:
+    - port: 5678 # Default port for image
+    
+    
+    
+    
+vi banana.yaml
+    
+kind: Pod
+apiVersion: v1
+metadata:
+  name: banana-app
+  labels:
+    app: banana
+spec:
+  containers:
+    - name: banana-app
+      image: hashicorp/http-echo
+      args:
+        - "-text=banana"
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: banana-service
+spec:
+  selector:
+    app: banana
+  ports:
+    - port: 5678 # Default port for image 
+    
+    
+###    Create the resources
+
+kubectl apply -f apple.yaml
+kubectl apply -f banana.yaml
+
+
+## Now, declare an Ingress to route requests to /apple to the first service, and requests to /banana to second service.
+## Check out the Ingress’ rules field that declares how requests are passed along.
+
+vi ingress.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-ingress
+spec:
+  rules:
+  - host: example.com
+    http:
+      paths:
+      - path: /apple
+        pathType: Prefix
+        backend:
+          service:
+            name: apple-service
+            port:
+              number: 5678
+      - path: /banana
+        pathType: Prefix
+        backend:
+          service:
+            name: banana-service
+            port:
+              number: 5678
+              
+  ## Create the Ingress in the cluster
+  
+  kubectl create -f ingress.yaml
+  
+[root@master-node kuberntes-nginx-controller]# k get svc -n ingress-nginx
+NAME            TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+ingress-nginx   LoadBalancer   10.102.93.210   <pending>     80:32435/TCP,443:32454/TCP   64m
+ 
+[root@master-node kuberntes-nginx-controller]# vi /etc/hosts
+[root@master-node kuberntes-nginx-controller]# curl -kL http://example.com/apple
+apple
+ 
+[root@master-node kuberntes-nginx-controller]# curl -kL http://example.com/banana
+banana
+
+ [root@master-node kuberntes-nginx-controller]# curl -k example.com:32435/apple
+apple
+[root@master-node kuberntes-nginx-controller]# curl -k example.com:32435/banana
+banana
+
+
+
+    
+    
+    
