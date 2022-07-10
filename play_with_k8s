@@ -1,9 +1,37 @@
- Get all nodes
-kubectl get nodes -o wide
-
 
 # Get pods in all namespaces
-kubectl get pods --all-namespaces -o wide
+kubectl get pods --all-namespaces
+
+# Get all nodes
+kubectl get nodes
+
+
+# Create a namespace 
+
+
+# Create a new YAML file called my-namespace.yaml with the contents:
+
+vi my-namespace.yaml 
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mynamespace
+  
+kubectl create -f my-namespace.yaml
+
+
+# Alternatively, you can create namespace using below command:
+
+kubectl create namespace <insert-namespace-name-here>
+
+# List the namespaces in the cluster 
+
+kubectl get namespaces
+
+# Delete a namespace with
+
+kubectl delete namespaces <insert-some-namespace-name>
 
 
 vi nginx-pod.yml
@@ -22,10 +50,13 @@ spec:
     - containerPort: 80
 
 
+# create pod with a yaml 
 
 kubectl create -f nginx-pod.yml
 
-kubectl get pods
+# List the pods 
+
+kubectl get pods 
 
 kubectl get pods -o wide
 
@@ -33,7 +64,15 @@ kubectl describe pods nginx
 
 curl <POD_IP>
 
+# Expose the pod useing a svc 
+
 kubectl expose pod nginx --port=80 --name=nginx-http
+
+kubectl get svc
+
+curl <SVC_IP>
+
+# Port value must be between 30000-32767
 
 kubectl expose pod nginx --type=NodePort
 
@@ -42,6 +81,46 @@ kubectl get svc
 curl <SVC_IP>
 
 kubectl delete svc nginx-http
+
+# To create an external load balancer, add the following line to your Service manifest: " type: LoadBalancer  " 
+
+vi nginx-svc.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  labels:
+    apps: nginx
+spec:
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  selector:
+    apps: nginx
+  type: LoadBalancer
+
+
+kubectl create -f nginx-svc.yml
+
+kubectl delete -f nginx-svc.yml
+
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  type: NodePort
+  selector:
+    apps: nginx
+  ports:
+  - nodePort: 30007
+    port: 80
+    protocol: TCP
+    targetPort: 80
+
+kubectl create -f nginx-svc.yml
 
 kubectl delete -f nginx-pod.yml
 
@@ -200,4 +279,6 @@ kubectl delete node $(hostname)
 sudo kubeadm reset
 
 cat /run/flannel/subnet.env
+
+
 
