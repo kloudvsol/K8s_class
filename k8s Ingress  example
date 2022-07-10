@@ -1,0 +1,72 @@
+# k8s Ingress  example
+
+# Deploying a Sample Application
+# To test your Ingress controller, you need some kind of small sample application. Here I’ll deploy an NGINX web server with the following command:
+
+kubectl run myapp --image=nginx
+
+# Accessing the Application
+# In order to allow users to access your new sample application, you need a NodePort Service that exposes a port on your app.
+
+# To create a NodePort Service for your application, run the following command:
+
+ kubectl expose pod myapp --port=80 --name myapp-service --type=NodePort
+
+# Then you can view the Service’s details by running the following:
+
+kubectl get svc | grep myapp-service
+
+
+# This summary tells you that your new demo application is routing port 80 (NGINX’s default port) to your host machine’s port XYZ. 
+# To confirm that the application is accessible, visit or use curl to view http://localhost:32017.
+
+# At this point, you have an application running and an Ingress controller running, but the two aren’t connected. This allows you to access the application locally, 
+# but in a production environment, you don’t want users accessing endpoints using the cluster’s IP address. 
+# To provide secure access to external users, you’ll need to set up a custom domain and connect your Ingress controller to your Service.
+
+# Adding a Custom Domain
+# Giving your application a custom domain will make the address easier to remember and ensure that even if you redeploy your Kubernetes cluster to a different set of IP addresses, the application will be available.
+
+# To avoid purchasing and configuring a real domain for this demonstration, you can add your desired domain (my-app.com in this case) to your local /etc/hosts file. To do this from the terminal, run the following command using your ClusterIP and domain of choice:
+
+# echo ‘[ClusterIP] my-app.com’ | sudo tee -a /etc/hosts
+
+
+# k get svc
+NAME            TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+kubernetes      ClusterIP   10.96.0.1       <none>        443/TCP        35h
+myapp-service   NodePort    10.98.119.165   <none>        80:31831/TCP   3m35s
+
+If you don’t remember your ClusterIP from above, you can get it by running the following:
+
+kubectl describe svc/myapp-service | grep IP: | awk ‘{print $2;}’
+
+# Be sure to replace [ClusterIP] with your Cluster IP from the service.
+
+# Next, update your Ingress file (ingress.yaml) with a host (my-app.com) and annotation as shown here:
+
+vi ingress.yaml
+
+#ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: example-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+  - host: my-app.com
+    http:
+      paths:
+       - path: /
+         pathType: Prefix
+         backend:
+           service:
+             name: myapp-service
+             port:
+               number:80
+    
+
