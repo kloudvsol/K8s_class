@@ -21,7 +21,7 @@ systemctl disable firewalld
 # Install the most recent Docker Engine package.
  sudo yum update -y
  sudo amazon-linux-extras install docker -y
- systemctl enable 
+ systemctl enable docker
  systemctl daemon-reload && systemctl restart docker 
  sudo usermod -a -G docker ec2-user
  docker info
