@@ -1,0 +1,212 @@
+Service
+Expose an application running in your cluster behind a single outward-facing endpoint, even when the workload is split across multiple backends.
+
+In Kubernetes, a Service is a method for exposing a network application that is running as one or more Pods in your cluster.
+
+In Kubernetes, a "Service" with a "ClusterIP" type is used for internal communication within the cluster, while "NodePort" allows external access to applications via a specific port on each node, and "LoadBalancer" provides a publicly accessible IP address with load balancing capabilities to distribute traffic across pods, essentially acting as a dedicated external load balancer managed by your cloud provider; all three are different ways to expose applications running on pods within a Kubernetes cluster depending on the desired access level. 
+Key points about each type:
+ClusterIP:
+Default service type. 
+Only accessible from within the Kubernetes cluster. 
+Useful for pod-to-pod communication. 
+NodePort:
+Exposes a service on a specific port on every node in the cluster. 
+Allows external access to the service by connecting to a node's IP address and the designated NodePort. 
+LoadBalancer:
+Creates a load balancer managed by the underlying cloud provider. 
+Provides a single external IP address to access the service, with traffic distributed across pods. 
+
+
+[root@master ~]# kubectl get nodes
+NAME     STATUS   ROLES                  AGE   VERSION
+master   Ready    control-plane,master   13d   v1.21.2
+worker   Ready    <none>                 13d   v1.21.2
+[root@master ~]# kubectl get ns
+NAME              STATUS   AGE
+besant            Active   12d
+default           Active   13d
+kube-flannel      Active   13d
+kube-node-lease   Active   13d
+kube-public       Active   13d
+kube-system       Active   13d
+[root@master ~]# kubectl get pods -n besant
+NAME             READY   STATUS    RESTARTS   AGE
+multicontainer   2/2     Running   2          11d
+nginx            1/1     Running   1          11d
+[root@master ~]#
+
+[root@master ~]# cat deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-deployment
+  labels:
+    app: myapp
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+      - name: myapp
+        image: nginx
+        ports:
+        - containerPort: 80
+
+[root@master ~]#
+[root@master ~]# kubectl create -f deployment.yaml  -n besant
+deployment.apps/myapp-deployment created
+[root@master ~]#
+[root@master ~]# k get pods -n besant
+NAME                                READY   STATUS    RESTARTS   AGE
+multicontainer                      2/2     Running   2          11d
+myapp-deployment-558547cf67-6bt76   1/1     Running   0          24s
+myapp-deployment-558547cf67-9cdpl   1/1     Running   0          24s
+myapp-deployment-558547cf67-whfjd   1/1     Running   0          24s
+nginx                               1/1     Running   1          11d
+[root@master ~]#
+[root@master ~]# k get deploy -n besant
+NAME               READY   UP-TO-DATE   AVAILABLE   AGE
+myapp-deployment   3/3     3            3           2m28s
+[root@master ~]#
+[root@master ~]# k get pods -n besant
+NAME                                READY   STATUS    RESTARTS   AGE
+multicontainer                      2/2     Running   2          11d
+myapp-deployment-558547cf67-ggd7b   1/1     Running   0          75s
+myapp-deployment-558547cf67-kwrfq   1/1     Running   0          75s
+myapp-deployment-558547cf67-srfkp   1/1     Running   0          75s
+nginx                               1/1     Running   1          11d
+[root@master ~]#
+[root@master ~]# k get svc -n besant
+No resources found in besant namespace.
+[root@master ~]#
+
+[root@master ~]# cat svc_clusterip.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp-service
+spec:
+  selector:
+    app: myapp
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+
+[root@master ~]# k create -f svc_clusterip.yaml -n besant
+service/myapp-service created
+[root@master ~]#
+[root@master ~]#
+[root@master ~]# k get svc -n besant
+NAME            TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+myapp-service   ClusterIP   10.111.235.83   <none>        80/TCP    7s
+[root@master ~]#
+
+[root@master ~]# k get svc -n besant
+NAME            TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+myapp-service   ClusterIP   10.111.235.83   <none>        80/TCP    7s
+[root@master ~]#
+[root@master ~]#
+[root@master ~]# curl 10.111.235.83
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+[root@master ~]#
+
+[root@master ~]# cat svc_NodePort.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp-service
+spec:
+  selector:
+    app: myapp
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: NodePort
+
+[root@master ~]# kubectl create -f svc_NodePort.yaml  -n besant
+service/myapp-service created
+[root@master ~]# kubectl get svc -n besant
+NAME            TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+myapp-service   NodePort   10.101.76.156   <none>        80:30327/TCP   39s
+[root@master ~]#
+[root@master ~]# cat svc_LoadBalancer.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: lbmyapp-service
+spec:
+  selector:
+    app: myapp
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: LoadBalancer
+[root@master ~]#
+[root@master ~]#
+[root@master ~]# k create -f svc_LoadBalancer.yaml -n besant
+service/lbmyapp-service created
+[root@master ~]#
+[root@master ~]# k get svc -n besant
+NAME              TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+lbmyapp-service   LoadBalancer   10.109.54.159   <pending>     80:32031/TCP   7s
+myapp-service     NodePort       10.101.76.156   <none>        80:30327/TCP   5m40s
+[root@master ~]#
+[root@master ~]# cat svc_Hard_code_NodePort.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: hc-myapp-service
+spec:
+  selector:
+    app: myapp
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      nodePort: 30007
+  type: NodePort
+
+[root@master ~]# k create -f svc_Hard_code_NodePort.yaml -n besant
+service/hc-myapp-service created
+[root@master ~]# k get svc -n besant
+NAME               TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+clmyapp-service    ClusterIP      10.106.100.85    <none>        80/TCP         3m16s
+hc-myapp-service   NodePort       10.108.228.220   <none>        80:30007/TCP   7s
+lbmyapp-service    LoadBalancer   10.109.54.159    <pending>     80:32031/TCP   6m42s
+myapp-service      NodePort       10.101.76.156    <none>        80:30327/TCP   12m
+[root@master ~]#
+
+[root@master ~]#
+
