@@ -33,6 +33,30 @@ kubectl get namespaces
 
 kubectl delete namespaces <insert-some-namespace-name>
 
+# Create NEW POD in one line CMD
+
+[root@master ~]# kubectl run mypod --image=nginx -n ns
+pod/mypod created
+[root@master ~]# kubectl get pods -n ns
+NAME    READY   STATUS    RESTARTS   AGE
+mypod   1/1     Running   0          3s
+[root@master ~]# kubectl get pods -n ns -o wide
+NAME    READY   STATUS    RESTARTS   AGE   IP           NODE     NOMINATED NODE   READINESS GATES
+mypod   1/1     Running   0          8s    10.244.1.8   worker   <none>           <none>
+[root@master ~]# curl 10.244.1.8
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+
+# Create Pod with YAML 
 
 vi nginx-pod.yml
 apiVersion: v1
@@ -50,9 +74,7 @@ spec:
     - containerPort: 80
 
 
-# create pod with a yaml 
-
-kubectl create -f nginx-pod.yml
+#  kubectl create -f nginx-pod.yml
 
 # List the pods 
 
