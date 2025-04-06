@@ -102,3 +102,142 @@ nginx-deployment-75675f5897-kzszj   1/1       Running   0          18s       app
 nginx-deployment-75675f5897-qqcnn   1/1       Running   0          18s       app=nginx,pod-template-hash=75675f5897
 
 
+# Scale up or down deployment replicas 
+
+[root@master ~]# k scale deploy nginx-deployment --replicas=0 -n ns
+deployment.apps/nginx-deployment scaled
+[root@master ~]# k get pods -n ns
+NAME                                READY   STATUS        RESTARTS   AGE
+multi-c                             2/2     Running       2          24h
+nginx                               1/1     Running       1          23h
+nginx-deployment-66b6c48dd5-2svng   0/1     Terminating   0          2m31s
+nginx-deployment-66b6c48dd5-gnqrt   0/1     Terminating   0          2m31s
+nginx-deployment-66b6c48dd5-tkfr5   0/1     Terminating   0          2m31s
+nginx-deployment-66b6c48dd5-wmq9r   0/1     Terminating   0          95s
+nginx-deployment-66b6c48dd5-ww6z2   0/1     Terminating   0          95s
+nginx-duplicate                     1/1     Running       1          23h
+
+
+[root@master ~]# k get pods -n ns
+NAME              READY   STATUS    RESTARTS   AGE
+multi-c           2/2     Running   2          24h
+nginx             1/1     Running   1          23h
+nginx-duplicate   1/1     Running   1          23h
+[root@master ~]#
+
+
+# k get pods -n ns
+No resources found in ns namespace.
+
+
+[root@master ~]# k get deploy -n ns
+NAME               READY   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployment   0/0     0            0           8m38s
+[root@master ~]#
+
+
+[root@master ~]# k scale deploy nginx-deployment --replicas=1 -n ns
+deployment.apps/nginx-deployment scaled
+[root@master ~]#
+[root@master ~]# k get deploy -n ns
+NAME               READY   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployment   1/1     1            1           9m9s
+[root@master ~]# k get pods -n ns
+NAME                                READY   STATUS    RESTARTS   AGE
+nginx-deployment-66b6c48dd5-lpcww   1/1     Running   0          8s
+[root@master ~]#
+
+
+
+[root@master ~]# k scale deploy nginx-deployment --replicas=3 -n ns
+deployment.apps/nginx-deployment scaled
+[root@master ~]#
+[root@master ~]# k get deploy -n ns
+NAME               READY   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployment   3/3     3            3           9m38s
+[root@master ~]#
+[root@master ~]#
+[root@master ~]# k get pods -n ns
+NAME                                READY   STATUS    RESTARTS   AGE
+nginx-deployment-66b6c48dd5-blnkm   1/1     Running   0          6s
+nginx-deployment-66b6c48dd5-lpcww   1/1     Running   0          36s
+nginx-deployment-66b6c48dd5-z479r   1/1     Running   0          6s
+[root@master ~]#
+
+
+# Updating a Deployment
+
+Note:
+A Deployment's rollout is triggered if and only if the Deployment's Pod template (that is, .spec.template) is changed, for example if the labels or container images of the template are updated. Other updates, such as scaling the Deployment, do not trigger a rollout.
+
+Follow the steps given below to update your Deployment:
+
+Let's update the nginx Pods to use the httpd image instead of the nginx:1.14.2 image.
+
+
+[root@master ~]# kubectl set image deploy nginx-deployment nginx=httpd -n ns
+deployment.apps/nginx-deployment image updated
+[root@master ~]# watch kubectl get pods -n ns
+[root@master ~]# k get pods -n ns -o wide
+NAME                                READY   STATUS    RESTARTS   AGE   IP            NODE     NOMINATED NODE   READINESS GATES
+nginx-deployment-6f6dbc8579-6rjhp   1/1     Running   0          26s   10.244.1.40   worker   <none>           <none>
+nginx-deployment-6f6dbc8579-g88wd   1/1     Running   0          26s   10.244.1.39   worker   <none>           <none>
+nginx-deployment-6f6dbc8579-nxr6j   1/1     Running   0          24s   10.244.1.42   worker   <none>           <none>
+nginx-deployment-6f6dbc8579-spfrv   1/1     Running   0          26s   10.244.1.38   worker   <none>           <none>
+nginx-deployment-6f6dbc8579-zmjrv   1/1     Running   0          24s   10.244.1.41   worker   <none>           <none>
+[root@master ~]# curl 10.244.1.41
+<html><body><h1>It works!</h1></body></html>
+[root@master ~]#
+
+
+To see the rollout status, run:
+
+[root@master ~]# kubectl rollout status deployment/nginx-deployment -n ns
+deployment "nginx-deployment" successfully rolled out
+[root@master ~]#
+
+Rolling Back to a Previous Revision
+Follow the steps given below to rollback the Deployment from the current version to the previous version, which is version 2.
+
+Now you've decided to undo the current rollout and rollback to the previous revision:
+
+
+[root@master ~]# kubectl rollout undo deployment/nginx-deployment -n ns
+deployment.apps/nginx-deployment rolled back
+[root@master ~]# watch kubectl get pods -n ns
+[root@master ~]#
+[root@master ~]# k get pods -n ns -o wide
+NAME                                READY   STATUS    RESTARTS   AGE   IP            NODE     NOMINATED NODE   READINESS GATES
+nginx-deployment-845d4d9dff-cc66g   1/1     Running   0          23s   10.244.1.46   worker   <none>           <none>
+nginx-deployment-845d4d9dff-dg666   1/1     Running   0          23s   10.244.1.47   worker   <none>           <none>
+nginx-deployment-845d4d9dff-fpph2   1/1     Running   0          25s   10.244.1.44   worker   <none>           <none>
+nginx-deployment-845d4d9dff-kw9m4   1/1     Running   0          25s   10.244.1.45   worker   <none>           <none>
+nginx-deployment-845d4d9dff-s5rvm   1/1     Running   0          25s   10.244.1.43   worker   <none>           <none>
+[root@master ~]# curl 10.244.1.45
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+[root@master ~]#
+
+
+watch kubectl get pods -n ns 
