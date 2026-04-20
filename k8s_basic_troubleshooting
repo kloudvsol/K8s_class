@@ -122,4 +122,74 @@ Are the logs clean?
 Are configs/secrets correct?
 Can the service reach the network?
 
+---
+
+
+Cordon worker node 
+
+
+[root@master ~]# k get nodes
+NAME     STATUS   ROLES                  AGE   VERSION
+master   Ready    control-plane,master   11d   v1.21.2
+worker   Ready    <none>                 11d   v1.21.2
+[root@master ~]#
+[root@master ~]#
+[root@master ~]# k cordon worker
+node/worker cordoned
+[root@master ~]#  k get nodes
+NAME     STATUS                     ROLES                  AGE   VERSION
+master   Ready                      control-plane,master   11d   v1.21.2
+worker   Ready,SchedulingDisabled   <none>                 11d   v1.21.2
+
+--> Delete all pods  then u get to see below 
+
+
+[root@master ~]# k get pods -n besant
+NAME                                READY   STATUS    RESTARTS   AGE
+nginx-deployment-845d4d9dff-2c2kt   0/1     Pending   0          62s
+nginx-deployment-845d4d9dff-l2csh   0/1     Pending   0          62s
+nginx-deployment-845d4d9dff-lnrvd   0/1     Pending   0          62s
+nginx-deployment-845d4d9dff-ms2xj   0/1     Pending   0          62s
+nginx-deployment-845d4d9dff-wk2f5   0/1     Pending   0          62s
+
+
+--> Describe pod to see events 
+
+Events:
+  Type     Reason            Age                From               Message
+  ----     ------            ----               ----               -------
+  Warning  FailedScheduling  14s (x5 over 32s)  default-scheduler  0/2 nodes are available: 1 node(s) had taint {node-role.kubernetes.io/master: }, that the pod didn't tolerate, 1 node(s) were unschedulable.
+
+
+--> 
+
+uncordon 
+
+[root@master ~]#  k get nodes
+NAME     STATUS                     ROLES                  AGE   VERSION
+master   Ready                      control-plane,master   11d   v1.21.2
+worker   Ready,SchedulingDisabled   <none>                 11d   v1.21.2
+[root@master ~]#
+[root@master ~]#
+[root@master ~]# k uncordon worker
+node/worker uncordoned
+[root@master ~]#  k get nodes
+NAME     STATUS   ROLES                  AGE   VERSION
+master   Ready    control-plane,master   11d   v1.21.2
+worker   Ready    <none>                 11d   v1.21.2
+[root@master ~]# k get pods -n besant
+NAME                                READY   STATUS    RESTARTS   AGE
+nginx-deployment-845d4d9dff-2c2kt   0/1     Pending   0          2m15s
+nginx-deployment-845d4d9dff-l2csh   1/1     Running   0          2m15s
+nginx-deployment-845d4d9dff-lnrvd   1/1     Running   0          2m15s
+nginx-deployment-845d4d9dff-ms2xj   1/1     Running   0          2m15s
+nginx-deployment-845d4d9dff-wk2f5   0/1     Pending   0          2m15s
+[root@master ~]# k get pods -n besant
+NAME                                READY   STATUS              RESTARTS   AGE
+nginx-deployment-845d4d9dff-2c2kt   0/1     ContainerCreating   0          2m22s
+nginx-deployment-845d4d9dff-l2csh   1/1     Running             0          2m22s
+nginx-deployment-845d4d9dff-lnrvd   1/1     Running             0          2m22s
+nginx-deployment-845d4d9dff-ms2xj   1/1     Running             0          2m22s
+nginx-deployment-845d4d9dff-wk2f5   0/1     ContainerCreating   0          2m22s
+[root@master ~]#
 
