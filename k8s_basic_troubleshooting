@@ -1,0 +1,125 @@
+1. Check Cluster Health
+Start by confirming the cluster itself is reachable and healthy.
+
+kubectl cluster-info
+kubectl get componentstatuses     # (deprecated but still useful on some clusters)
+kubectl get nodes
+
+What to look for:
+
+API server reachable
+All nodes in Ready state
+No widespread failures
+
+
+Node-Level Troubleshooting
+If pods are not scheduling or are frequently restarting, check nodes.
+
+kubectl describe node <node-name>
+
+
+🔍 Common issues:
+
+NotReady nodes
+DiskPressure / MemoryPressure
+Network issues
+Kubelet not running
+
+📌 If node is unhealthy:
+
+Restart kubelet
+Check node logs
+Validate cloud provider / VM health
+
+
+Pod Status Investigation
+
+Most issues surface at the pod level.
+
+kubectl get pods -n <namespace>
+kubectl describe pod <pod-name> -n <namespace>
+
+
+🛑 Common pod states & causes
+
+StatusLikely CausePendingNo nodes/resources, PVC issuesCrashLoopBackOffApp crash, bad configImagePullBackOffImage name/tag or registry authErrorApp start failure
+
+
+4. Check Pod Logs
+Always inspect logs next.
+
+kubectl logs <pod-name> -n <namespace>
+kubectl logs <pod-name> -c <container-name> -n <namespace>
+
+ For restarting containers:
+ kubectl logs <pod-name> --previous
+
+Look for:
+
+App crashes
+Missing configs/secrets
+Connection failures
+Permission errors
+
+6. Resource Constraints (CPU / Memory)
+
+Pods may fail due to resource limits.
+
+kubectl describe pod <pod-name>
+
+🔍 Check:
+
+OOMKilled → Memory limit too low
+CPU throttling
+Requests/limits mismatch
+
+💡 Quick action:
+
+Increase memory/CPU
+
+
+
+7. Networking & Service Issues
+If the app is running but unreachable:
+
+
+kubectl get svc -n <namespace>
+kubectl describe svc <service-name>
+kubectl get endpoints <service-name>
+
+
+8. Deployment & Rollout Problems
+If an update failed:
+
+kubectl get deploy -n <namespace>
+kubectl rollout status deploy/<deployment-name>
+kubectl rollout history deploy/<deployment-name>
+
+Rollback if needed:
+
+kubectl rollout undo deploy/<deployment-name>
+
+
+9. Events: The Fastest Clue
+Always check events—they often tell you exactly what’s wrong.
+
+kubectl get events -n <namespace> --sort-by=.metadata.creationTimestamp
+
+📌 Events reveal:
+
+Image pull failures
+Scheduling errors
+Volume mount issues
+
+
+
+10. Quick “Golden Checklist”
+When things break, ask these 5 questions:
+
+Is the cluster & node healthy?
+Is the pod running?
+Are the logs clean?
+Are configs/secrets correct?
+Can the service reach the network?
+
+
